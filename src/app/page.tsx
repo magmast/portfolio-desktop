@@ -14,6 +14,9 @@ export default function HomePage() {
         src={wallpaper}
         alt="Orange Blue Moon"
         className="absolute left-0 top-0 h-full w-full object-cover"
+        sizes="100vw"
+        placeholder="blur"
+        priority
       />
 
       <div className="relative flex w-full justify-center bg-black py-1 text-white">
