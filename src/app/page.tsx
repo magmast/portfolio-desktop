@@ -1,7 +1,9 @@
 import Image from "next/image";
 
 import wallpaper from "~/assets/wallpapers/abstract-painting.jpg";
-import { AboutMe } from "~/components/about-me";
+import { InfoApp } from "~/components/apps/info-app";
+import { LicensesApp } from "~/components/apps/licenses-app";
+import { SettingsApp } from "~/components/apps/settings-app";
 import { Clock } from "~/components/clock";
 import { Desktop } from "~/components/desktop";
 
@@ -19,7 +21,9 @@ export default function HomePage() {
       </div>
 
       <Desktop className="flex-grow">
-        <AboutMe />
+        <InfoApp />
+        <LicensesApp />
+        <SettingsApp />
       </Desktop>
     </main>
   );

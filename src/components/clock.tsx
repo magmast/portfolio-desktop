@@ -10,7 +10,7 @@ import { cn } from "~/lib/utils";
 
 export function Clock({
   className,
-}: Omit<React.ComponentPropsWithoutRef<"p">, "children">) {
+}: Omit<React.ComponentPropsWithRef<"p">, "children">) {
   const date = useDate();
   const isClient = useIsClient();
 

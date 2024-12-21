@@ -1,6 +1,8 @@
-import { Info } from "lucide-react";
-import * as motion from "motion/react-client";
+"use client";
 
+import { Info } from "lucide-react";
+
+import { DesktopIcon } from "~/components/desktop";
 import {
   Window,
   WindowBody,
@@ -10,21 +12,11 @@ import {
   WindowTrigger,
 } from "~/components/window";
 
-export function AboutMe() {
+export function InfoApp() {
   return (
     <Window>
       <WindowTrigger asChild>
-        <motion.button
-          className="flex flex-col items-center gap-2"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-        >
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-100 text-black">
-            <Info size={36} />
-          </div>
-
-          <span className="text-sm text-white">About Me</span>
-        </motion.button>
+        <DesktopIcon Icon={Info} label="Info" />
       </WindowTrigger>
 
       <WindowContent id="about-me">

@@ -6,7 +6,6 @@ import {
   AnimatePresence,
   type DragControls,
   motion,
-  transform,
   useDragControls,
 } from "motion/react";
 import React, { useState } from "react";
@@ -74,7 +73,7 @@ export function WindowTrigger({
   asChild,
   onClick,
   ...props
-}: React.ComponentPropsWithoutRef<"button"> & {
+}: React.ComponentPropsWithRef<"button"> & {
   asChild?: boolean;
 }) {
   const Comp = asChild ? Slot : "button";
@@ -106,6 +105,7 @@ export function WindowContent({
   ...props
 }: React.ComponentPropsWithoutRef<typeof MotionBaseWindowContent> & {
   id: string;
+  ref?: React.Ref<HTMLDivElement>;
 }) {
   const { isOpen, isMaximized } = useWindow();
 
@@ -121,22 +121,20 @@ export function WindowContent({
   );
 }
 
-const BaseWindowContent = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentPropsWithoutRef<"div">
->(({ className, ...props }, ref) => {
+function BaseWindowContent({
+  className,
+  ...props
+}: React.ComponentPropsWithRef<"div">) {
   return (
     <div
       {...props}
-      ref={ref}
       className={cn(
         "absolute min-w-80 overflow-hidden bg-white text-black shadow-2xl",
         className,
       )}
     />
   );
-});
-BaseWindowContent.displayName = "BaseWindowContent";
+}
 
 const MotionBaseWindowContent = motion.create(BaseWindowContent);
 
@@ -146,6 +144,7 @@ function MinimizedWindowContent({
   ...props
 }: React.ComponentPropsWithoutRef<typeof MotionBaseWindowContent> & {
   id: string;
+  ref?: React.Ref<HTMLDivElement>;
 }) {
   const desktop = useDesktop();
   const { dragControls } = useWindow();
@@ -179,6 +178,7 @@ function MaximizedWindowContent({
   ...props
 }: React.ComponentPropsWithoutRef<typeof MotionBaseWindowContent> & {
   id: string;
+  ref?: React.Ref<HTMLDivElement>;
 }) {
   return (
     <MotionBaseWindowContent
@@ -199,7 +199,7 @@ export function WindowHeader({
   children,
   onPointerDown,
   ...props
-}: React.ComponentPropsWithoutRef<typeof motion.div>) {
+}: React.ComponentPropsWithRef<typeof motion.div>) {
   const { dragControls, isMaximized } = useWindow();
 
   return (
@@ -212,7 +212,7 @@ export function WindowHeader({
         dragControls.start(event);
       }}
     >
-      {children}
+      {children as React.ReactNode}
 
       <div className="flex justify-end">
         {isMaximized ? (
@@ -242,7 +242,7 @@ export function WindowHeader({
 export function WindowTitle({
   className,
   ...props
-}: React.ComponentPropsWithoutRef<"h2">) {
+}: React.ComponentPropsWithRef<"h2">) {
   return (
     <h2
       {...props}
@@ -254,7 +254,7 @@ export function WindowTitle({
 export function WindowBody({
   className,
   ...props
-}: React.ComponentPropsWithoutRef<typeof motion.div>) {
+}: React.ComponentPropsWithRef<typeof motion.div>) {
   return (
     <motion.div layout {...props} className={cn("px-4 py-2", className)} />
   );
@@ -264,7 +264,7 @@ export function WindowMaximize({
   asChild,
   onClick,
   ...props
-}: React.ComponentPropsWithoutRef<"button"> & { asChild?: boolean }) {
+}: React.ComponentPropsWithRef<"button"> & { asChild?: boolean }) {
   const Comp = asChild ? Slot : "button";
   const { maximize } = useWindow();
   return (
@@ -282,7 +282,7 @@ export function WindowMinimize({
   asChild,
   onClick,
   ...props
-}: React.ComponentPropsWithoutRef<"button"> & { asChild?: boolean }) {
+}: React.ComponentPropsWithRef<"button"> & { asChild?: boolean }) {
   const Comp = asChild ? Slot : "button";
   const { minimize } = useWindow();
   return (
@@ -300,7 +300,7 @@ export function WindowClose({
   asChild,
   onClick,
   ...props
-}: React.ComponentPropsWithoutRef<"button"> & {
+}: React.ComponentPropsWithRef<"button"> & {
   asChild?: boolean;
 }) {
   const Comp = asChild ? Slot : "button";
@@ -313,5 +313,33 @@ export function WindowClose({
         close();
       }}
     />
+  );
+}
+
+export function ToDoWindow({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Window>
+      {children}
+      <WindowContent id={id}>
+        <WindowHeader>
+          <WindowTitle>{title}</WindowTitle>
+        </WindowHeader>
+
+        <WindowBody>
+          <p>
+            Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam,
+            quos.
+          </p>
+        </WindowBody>
+      </WindowContent>
+    </Window>
   );
 }
