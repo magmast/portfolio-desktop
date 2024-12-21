@@ -1,7 +1,8 @@
 "use client";
 
 import { format } from "date-fns";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import * as m from "motion/react-m";
 import React from "react";
 import { useIsClient } from "usehooks-ts";
 
@@ -25,7 +26,7 @@ export function Clock({
         {format(date, "d MMM HH:mm")
           .split("")
           .map((char, index) => (
-            <motion.span
+            <m.span
               key={`${index}-${char}`}
               className={cn({ "inline-block": char !== " " })}
               initial={isClient ? { y: "-50%", scale: 0 } : false}
@@ -34,7 +35,7 @@ export function Clock({
               transition={{ duration: 0.9 }}
             >
               {char}
-            </motion.span>
+            </m.span>
           ))}
       </AnimatePresence>
     </p>

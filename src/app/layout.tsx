@@ -1,6 +1,7 @@
 import "~/styles/globals.css";
 
 import { GeistSans } from "geist/font/sans";
+import { domAnimation, LazyMotion } from "motion/react";
 import { type Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -14,7 +15,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${GeistSans.variable}`}>
-      <body>{children}</body>
+      <body>
+        <LazyMotion features={domAnimation} strict>
+          {children}
+        </LazyMotion>
+      </body>
     </html>
   );
 }

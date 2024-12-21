@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "motion/react";
+import * as m from "motion/react-m";
 import React from "react";
 
 import { cn } from "~/lib/utils";
@@ -40,12 +40,12 @@ export function DesktopIcon({
   label,
   className,
   ...props
-}: React.ComponentPropsWithRef<typeof motion.button> & {
+}: React.ComponentPropsWithRef<typeof m.button> & {
   Icon: React.ElementType;
   label: string;
 }) {
   return (
-    <motion.button
+    <m.button
       {...props}
       className={cn("flex w-16 flex-col items-center gap-2", className)}
       whileHover={{ scale: 1.1 }}
@@ -56,6 +56,6 @@ export function DesktopIcon({
       </div>
 
       <span className="text-sm text-white">{label}</span>
-    </motion.button>
+    </m.button>
   );
 }

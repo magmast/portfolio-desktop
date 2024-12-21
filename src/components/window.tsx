@@ -2,12 +2,8 @@
 
 import { Slot } from "@radix-ui/react-slot";
 import { Maximize, Minimize, X } from "lucide-react";
-import {
-  AnimatePresence,
-  type DragControls,
-  motion,
-  useDragControls,
-} from "motion/react";
+import { AnimatePresence, useDragControls } from "motion/react";
+import * as m from "motion/react-m";
 import React, { useState } from "react";
 import invariant from "tiny-invariant";
 
@@ -23,7 +19,9 @@ interface WindowState {
   isMaximized: boolean;
   maximize: () => void;
   minimize: () => void;
-  dragControls: DragControls;
+  dragControls: NonNullable<
+    React.ComponentPropsWithoutRef<(typeof m)["div"]>["dragControls"]
+  >;
 }
 
 const WindowContext = React.createContext<WindowState | undefined>(undefined);
@@ -50,7 +48,8 @@ export function Window({ children }: { children: React.ReactNode }) {
 
   const minimize = () => setMaximized(false);
 
-  const dragControls = useDragControls();
+  const dragControls =
+    useDragControls() as unknown as WindowState["dragControls"];
 
   return (
     <WindowContext.Provider
@@ -136,7 +135,7 @@ function BaseWindowContent({
   );
 }
 
-const MotionBaseWindowContent = motion.create(BaseWindowContent);
+const MotionBaseWindowContent = m.create(BaseWindowContent);
 
 function MinimizedWindowContent({
   id,
@@ -199,11 +198,11 @@ export function WindowHeader({
   children,
   onPointerDown,
   ...props
-}: React.ComponentPropsWithRef<typeof motion.div>) {
+}: React.ComponentPropsWithRef<typeof m.div>) {
   const { dragControls, isMaximized } = useWindow();
 
   return (
-    <motion.div
+    <m.div
       layout
       {...props}
       className={cn("flex items-center bg-zinc-100 p-1 px-3", className)}
@@ -235,7 +234,7 @@ export function WindowHeader({
           </Button>
         </WindowClose>
       </div>
-    </motion.div>
+    </m.div>
   );
 }
 
@@ -254,10 +253,8 @@ export function WindowTitle({
 export function WindowBody({
   className,
   ...props
-}: React.ComponentPropsWithRef<typeof motion.div>) {
-  return (
-    <motion.div layout {...props} className={cn("px-4 py-2", className)} />
-  );
+}: React.ComponentPropsWithRef<typeof m.div>) {
+  return <m.div layout {...props} className={cn("px-4 py-2", className)} />;
 }
 
 export function WindowMaximize({
