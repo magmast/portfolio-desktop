@@ -9,35 +9,43 @@ import { useIsClient } from "usehooks-ts";
 import { useDate } from "~/hooks/use-date";
 import { cn } from "~/lib/utils";
 
+import { Text } from "./text";
+
 export function Clock({
   className,
-}: Omit<React.ComponentPropsWithRef<"p">, "children">) {
+  ...props
+}: Omit<React.ComponentPropsWithRef<typeof Text>, "children" | "asChild">) {
   const date = useDate();
   const isClient = useIsClient();
 
   return (
-    <p
+    <Text
+      variant="clock"
+      {...props}
       className={cn(
         "overflow-hidden text-sm font-semibold text-white",
         className,
       )}
+      asChild
     >
-      <AnimatePresence mode="popLayout">
-        {format(date, "d MMM HH:mm")
-          .split("")
-          .map((char, index) => (
-            <m.span
-              key={`${index}-${char}`}
-              className={cn({ "inline-block": char !== " " })}
-              initial={isClient ? { y: "-50%", scale: 0 } : false}
-              animate={{ y: 0, scale: 1 }}
-              exit={{ y: "50%", scale: 0 }}
-              transition={{ duration: 0.9 }}
-            >
-              {char}
-            </m.span>
-          ))}
-      </AnimatePresence>
-    </p>
+      <p>
+        <AnimatePresence mode="popLayout">
+          {format(date, "d MMM HH:mm")
+            .split("")
+            .map((char, index) => (
+              <m.span
+                key={`${index}-${char}`}
+                className={cn({ "inline-block": char !== " " })}
+                initial={isClient ? { y: "-50%", scale: 0 } : false}
+                animate={{ y: 0, scale: 1 }}
+                exit={{ y: "50%", scale: 0 }}
+                transition={{ duration: 0.9 }}
+              >
+                {char}
+              </m.span>
+            ))}
+        </AnimatePresence>
+      </p>
+    </Text>
   );
 }

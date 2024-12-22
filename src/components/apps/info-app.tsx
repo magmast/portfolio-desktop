@@ -3,6 +3,7 @@
 import { Info } from "lucide-react";
 
 import { DesktopIcon } from "~/components/desktop";
+import { Text } from "~/components/text";
 import {
   Window,
   WindowBody,
@@ -14,21 +15,23 @@ import {
 
 export function InfoApp() {
   return (
-    <Window>
+    <Window id="about-me">
       <WindowTrigger asChild>
         <DesktopIcon Icon={Info} label="Info" />
       </WindowTrigger>
 
-      <WindowContent id="about-me">
+      <WindowContent>
         <WindowHeader>
           <WindowTitle>About Me</WindowTitle>
         </WindowHeader>
 
         <WindowBody>
-          <p>
-            I{"'"}m a software engineer with a passion for creating
-            user-friendly and efficient web applications.
-          </p>
+          <Text variant="body" asChild>
+            <p>
+              I{"'"}m a software engineer with a passion for creating
+              user-friendly and efficient web applications.
+            </p>
+          </Text>
         </WindowBody>
       </WindowContent>
     </Window>

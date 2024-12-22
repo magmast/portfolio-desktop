@@ -3,6 +3,7 @@
 import * as m from "motion/react-m";
 import React from "react";
 
+import { Text } from "~/components/text";
 import { cn } from "~/lib/utils";
 
 const DesktopContext = React.createContext<
@@ -47,7 +48,7 @@ export function DesktopIcon({
   return (
     <m.button
       {...props}
-      className={cn("flex w-16 flex-col items-center gap-2", className)}
+      className={cn("flex w-16 flex-col items-center gap-1", className)}
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
     >
@@ -55,7 +56,9 @@ export function DesktopIcon({
         <Icon size={36} />
       </div>
 
-      <span className="text-sm text-white">{label}</span>
+      <Text variant="icon-label" className="text-white drop-shadow">
+        {label}
+      </Text>
     </m.button>
   );
 }

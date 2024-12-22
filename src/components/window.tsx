@@ -1,18 +1,58 @@
 "use client";
 
+import * as Portal from "@radix-ui/react-portal";
 import { Slot } from "@radix-ui/react-slot";
 import { Maximize, Minimize, X } from "lucide-react";
 import { AnimatePresence, useDragControls } from "motion/react";
 import * as m from "motion/react-m";
-import React, { useState } from "react";
+import React from "react";
 import invariant from "tiny-invariant";
 
+import { Text } from "~/components/text";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
-import { useDesktop } from "./desktop";
+interface WindowManagerState {
+  ref: React.RefObject<HTMLDivElement | null>;
+  order: string[];
+  focus: (id: string) => void;
+  remove: (id: string) => void;
+}
+
+const WindowManagerContext = React.createContext<
+  WindowManagerState | undefined
+>(undefined);
+
+function useWindowManager(displayName: string) {
+  const context = React.use(WindowManagerContext);
+  invariant(
+    context,
+    `${displayName} must be used within a WindowManager component.`,
+  );
+  return context;
+}
+
+export function WindowManager(props: React.ComponentPropsWithRef<"div">) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [order, setOrder] = React.useState<string[]>([]);
+
+  const focus = React.useCallback((id: string) => {
+    setOrder((order) => [...order.filter((oid) => oid !== id), id]);
+  }, []);
+
+  const remove = React.useCallback((id: string) => {
+    setOrder((order) => order.filter((oid) => oid !== id));
+  }, []);
+
+  return (
+    <WindowManagerContext.Provider value={{ ref, order, focus, remove }}>
+      <div ref={ref} {...props} />
+    </WindowManagerContext.Provider>
+  );
+}
 
 interface WindowState {
+  id: string;
   isOpen: boolean;
   open: () => void;
   close: () => void;
@@ -26,23 +66,35 @@ interface WindowState {
 
 const WindowContext = React.createContext<WindowState | undefined>(undefined);
 
-function useWindow() {
+function useWindow(displayName: string) {
   const context = React.useContext(WindowContext);
-  invariant(context, "useWindow must be used within a Window component.");
+  invariant(context, `${displayName} must be used within a Window component.`);
   return context;
 }
 
-export function Window({ children }: { children: React.ReactNode }) {
+export function Window({
+  children,
+  id,
+}: {
+  id: string;
+  children: React.ReactNode;
+}) {
   const [isOpen, setOpen] = React.useState(false);
 
-  const [isMaximized, setMaximized] = useState(false);
+  const [isMaximized, setMaximized] = React.useState(false);
 
-  const open = () => setOpen(true);
+  const { focus, remove } = useWindowManager("Window");
 
-  const close = () => {
+  const open = React.useCallback(() => {
+    setOpen(true);
+    focus(id);
+  }, [id, focus]);
+
+  const close = React.useCallback(() => {
     setOpen(false);
     setMaximized(false);
-  };
+    remove(id);
+  }, [id, remove]);
 
   const maximize = () => setMaximized(true);
 
@@ -54,6 +106,7 @@ export function Window({ children }: { children: React.ReactNode }) {
   return (
     <WindowContext.Provider
       value={{
+        id,
         isOpen,
         open,
         close,
@@ -76,7 +129,7 @@ export function WindowTrigger({
   asChild?: boolean;
 }) {
   const Comp = asChild ? Slot : "button";
-  const { open } = useWindow();
+  const { open } = useWindow("WindowTrigger");
   return (
     <Comp
       {...props}
@@ -99,22 +152,20 @@ const windowContentVariants = {
   },
 };
 
-export function WindowContent({
-  id,
-  ...props
-}: React.ComponentPropsWithoutRef<typeof MotionBaseWindowContent> & {
-  id: string;
-  ref?: React.Ref<HTMLDivElement>;
-}) {
-  const { isOpen, isMaximized } = useWindow();
+export function WindowContent(
+  props: React.ComponentPropsWithoutRef<typeof MotionBaseWindowContent> & {
+    ref?: React.Ref<HTMLDivElement>;
+  },
+) {
+  const { id, isOpen, isMaximized } = useWindow("WindowContent");
 
   return (
     <AnimatePresence>
       {isOpen &&
         (isMaximized ? (
-          <MaximizedWindowContent {...props} key={id} id={id} />
+          <MaximizedWindowContent {...props} key={id} />
         ) : (
-          <MinimizedWindowContent {...props} key={id} id={id} />
+          <MinimizedWindowContent {...props} key={id} />
         ))}
     </AnimatePresence>
   );
@@ -122,36 +173,52 @@ export function WindowContent({
 
 function BaseWindowContent({
   className,
+  style,
+  onPointerDown,
   ...props
 }: React.ComponentPropsWithRef<"div">) {
+  const {
+    ref: windowManagerRef,
+    focus,
+    order,
+  } = useWindowManager("WindowContent");
+  const { id } = useWindow("WindowContent");
+
   return (
-    <div
-      {...props}
-      className={cn(
-        "absolute min-w-80 overflow-hidden bg-white text-black shadow-2xl",
-        className,
-      )}
-    />
+    <Portal.Root container={windowManagerRef.current}>
+      <div
+        {...props}
+        className={cn(
+          "absolute min-w-80 overflow-hidden bg-white text-black shadow-lg",
+          className,
+        )}
+        style={{
+          zIndex: order.indexOf(id) + 1,
+          ...style,
+        }}
+        onPointerDown={(event) => {
+          onPointerDown?.(event);
+          focus(id);
+        }}
+      />
+    </Portal.Root>
   );
 }
 
 const MotionBaseWindowContent = m.create(BaseWindowContent);
 
 function MinimizedWindowContent({
-  id,
   className,
   ...props
 }: React.ComponentPropsWithoutRef<typeof MotionBaseWindowContent> & {
-  id: string;
   ref?: React.Ref<HTMLDivElement>;
 }) {
-  const desktop = useDesktop();
-  const { dragControls } = useWindow();
+  const { ref: windowManagerRef } = useWindowManager("WindowContent");
+  const { id, dragControls } = useWindow("WindowContent");
 
   return (
     <MotionBaseWindowContent
       {...props}
-      id={id}
       layoutId={id}
       className={cn("left-1/2 top-1/2 h-auto w-auto rounded-lg", className)}
       variants={windowContentVariants}
@@ -163,26 +230,25 @@ function MinimizedWindowContent({
       }
       dragListener={false}
       dragControls={dragControls}
-      dragConstraints={desktop}
+      dragConstraints={windowManagerRef}
       dragMomentum={false}
-      whileDrag={{ scale: 0.98 }}
+      whileDrag={{ scale: 0.98, cursor: "grabbing" }}
       drag
     />
   );
 }
 
 function MaximizedWindowContent({
-  id,
   className,
   ...props
 }: React.ComponentPropsWithoutRef<typeof MotionBaseWindowContent> & {
-  id: string;
   ref?: React.Ref<HTMLDivElement>;
 }) {
+  const { id } = useWindow("WindowContent");
+
   return (
     <MotionBaseWindowContent
       {...props}
-      id={id}
       layoutId={id}
       className={cn("left-0 top-0 h-full w-full", className)}
       variants={windowContentVariants}
@@ -199,15 +265,19 @@ export function WindowHeader({
   onPointerDown,
   ...props
 }: React.ComponentPropsWithRef<typeof m.div>) {
-  const { dragControls, isMaximized } = useWindow();
+  const { dragControls, isMaximized } = useWindow("WindowHeader");
 
   return (
     <m.div
       layout
       {...props}
-      className={cn("flex items-center bg-zinc-100 p-1 px-3", className)}
+      className={cn(
+        "flex touch-none items-center bg-zinc-100 p-1 px-3",
+        className,
+      )}
       onPointerDown={(event) => {
         onPointerDown?.(event);
+        event.preventDefault();
         dragControls.start(event);
       }}
     >
@@ -216,20 +286,20 @@ export function WindowHeader({
       <div className="flex justify-end">
         {isMaximized ? (
           <WindowMinimize asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hover:bg-zinc-200">
               <Minimize />
             </Button>
           </WindowMinimize>
         ) : (
           <WindowMaximize asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hover:bg-zinc-200">
               <Maximize />
             </Button>
           </WindowMaximize>
         )}
 
         <WindowClose asChild>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="hover:bg-zinc-200">
             <X />
           </Button>
         </WindowClose>
@@ -240,13 +310,18 @@ export function WindowHeader({
 
 export function WindowTitle({
   className,
+  children,
   ...props
 }: React.ComponentPropsWithRef<"h2">) {
   return (
-    <h2
+    <Text
+      variant="window-title"
       {...props}
-      className={cn("col-start-2 flex-grow font-medium", className)}
-    />
+      asChild
+      className={cn("col-start-2 flex-grow", className)}
+    >
+      <h2>{children}</h2>
+    </Text>
   );
 }
 
@@ -263,7 +338,7 @@ export function WindowMaximize({
   ...props
 }: React.ComponentPropsWithRef<"button"> & { asChild?: boolean }) {
   const Comp = asChild ? Slot : "button";
-  const { maximize } = useWindow();
+  const { maximize } = useWindow("WindowHeader");
   return (
     <Comp
       {...props}
@@ -281,7 +356,7 @@ export function WindowMinimize({
   ...props
 }: React.ComponentPropsWithRef<"button"> & { asChild?: boolean }) {
   const Comp = asChild ? Slot : "button";
-  const { minimize } = useWindow();
+  const { minimize } = useWindow("WindowHeader");
   return (
     <Comp
       {...props}
@@ -301,7 +376,7 @@ export function WindowClose({
   asChild?: boolean;
 }) {
   const Comp = asChild ? Slot : "button";
-  const { close } = useWindow();
+  const { close } = useWindow("WindowHeader");
   return (
     <Comp
       {...props}
@@ -323,18 +398,20 @@ export function ToDoWindow({
   children: React.ReactNode;
 }) {
   return (
-    <Window>
+    <Window id={id}>
       {children}
-      <WindowContent id={id}>
+      <WindowContent>
         <WindowHeader>
           <WindowTitle>{title}</WindowTitle>
         </WindowHeader>
 
         <WindowBody>
-          <p>
-            Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam,
-            quos.
-          </p>
+          <Text variant="body" asChild>
+            <p>
+              Lorem ipsum dolor sit amet consectetur adipisicing elit. Quisquam,
+              quos.
+            </p>
+          </Text>
         </WindowBody>
       </WindowContent>
     </Window>
