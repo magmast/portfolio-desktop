@@ -7,7 +7,7 @@ import { SettingsApp } from "~/components/apps/settings-app";
 import { Clock } from "~/components/clock";
 import { Desktop } from "~/components/desktop";
 import { Wallpaper } from "~/components/wallpaper";
-import { WindowManager } from "~/components/window";
+import { WindowBoundary } from "~/components/window";
 
 export default function HomePage() {
   return (
@@ -17,13 +17,13 @@ export default function HomePage() {
           <Clock />
         </div>
 
-        <Desktop className="flex-grow">
-          <WindowManager className="h-full w-full space-y-3">
+        <WindowBoundary asChild>
+          <Desktop className="flex-grow space-y-2">
             <InfoApp />
             <LicensesApp />
             <SettingsApp />
-          </WindowManager>
-        </Desktop>
+          </Desktop>
+        </WindowBoundary>
       </Wallpaper>
     </main>
   );

@@ -3,73 +3,117 @@
 import * as Portal from "@radix-ui/react-portal";
 import { Slot } from "@radix-ui/react-slot";
 import { Maximize, Minimize, X } from "lucide-react";
-import { AnimatePresence, useDragControls } from "motion/react";
+import {
+  AnimatePresence,
+  type DragControls,
+  useDragControls,
+} from "motion/react";
 import * as m from "motion/react-m";
+import {
+  parseAsArrayOf,
+  parseAsBoolean,
+  parseAsString,
+  useQueryState,
+} from "nuqs";
 import React from "react";
 import invariant from "tiny-invariant";
+import { useIsClient } from "usehooks-ts";
 
 import { Text } from "~/components/text";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
-interface WindowManagerState {
-  ref: React.RefObject<HTMLDivElement | null>;
-  order: string[];
-  focus: (id: string) => void;
-  remove: (id: string) => void;
-}
-
-const WindowManagerContext = React.createContext<
-  WindowManagerState | undefined
+const WindowBoundaryContext = React.createContext<
+  | {
+      boundary: React.RefObject<HTMLElement | null>;
+    }
+  | undefined
 >(undefined);
 
-function useWindowManager(displayName: string) {
-  const context = React.use(WindowManagerContext);
+function useWindowBoundary(displayName: string) {
+  const context = React.use(WindowBoundaryContext);
   invariant(
     context,
-    `${displayName} must be used within a WindowManager component.`,
+    `${displayName} must be used within a WindowBoundary component.`,
   );
   return context;
 }
 
-export function WindowManager(props: React.ComponentPropsWithRef<"div">) {
-  const ref = React.useRef<HTMLDivElement>(null);
-  const [order, setOrder] = React.useState<string[]>([]);
-
-  const focus = React.useCallback((id: string) => {
-    setOrder((order) => [...order.filter((oid) => oid !== id), id]);
-  }, []);
-
-  const remove = React.useCallback((id: string) => {
-    setOrder((order) => order.filter((oid) => oid !== id));
-  }, []);
+export function WindowBoundary({
+  asChild,
+  ...props
+}: React.ComponentPropsWithRef<"div"> & { asChild?: boolean }) {
+  const Comp = asChild ? Slot : "div";
+  const ref = React.useRef<HTMLElement>(null);
 
   return (
-    <WindowManagerContext.Provider value={{ ref, order, focus, remove }}>
-      <div ref={ref} {...props} />
-    </WindowManagerContext.Provider>
+    <WindowBoundaryContext.Provider value={{ boundary: ref }}>
+      <Comp
+        {...props}
+        ref={(node) => {
+          ref.current = node;
+          if (typeof props.ref === "function") {
+            props.ref(node);
+          } else if (props.ref) {
+            props.ref.current = node;
+          }
+        }}
+      />
+    </WindowBoundaryContext.Provider>
   );
 }
 
-interface WindowState {
-  id: string;
-  isOpen: boolean;
-  open: () => void;
-  close: () => void;
-  isMaximized: boolean;
-  maximize: () => void;
-  minimize: () => void;
-  dragControls: NonNullable<
-    React.ComponentPropsWithoutRef<(typeof m)["div"]>["dragControls"]
-  >;
-}
-
-const WindowContext = React.createContext<WindowState | undefined>(undefined);
+const WindowContext = React.createContext<
+  { id: string; dragControls: DragControls } | undefined
+>(undefined);
 
 function useWindow(displayName: string) {
-  const context = React.useContext(WindowContext);
+  const context = React.use(WindowContext);
   invariant(context, `${displayName} must be used within a Window component.`);
-  return context;
+  const { id, dragControls } = context;
+
+  const [windows, setWindows] = useQueryState(
+    "w",
+    parseAsArrayOf(parseAsString).withDefault([]),
+  );
+
+  const [isMaximized, setIsMaximized] = useQueryState(
+    "m",
+    parseAsBoolean.withDefault(false),
+  );
+
+  const order = React.useMemo(() => windows.indexOf(id), [windows, id]);
+
+  const open = React.useCallback(
+    async () =>
+      void (await setWindows((order) => [
+        ...order.filter((oid) => oid !== id),
+        id,
+      ])),
+    [id, setWindows],
+  );
+
+  return {
+    id,
+    order,
+    dragControls,
+    isOpen: React.useMemo(() => windows.includes(id), [windows, id]),
+    open,
+    close: React.useCallback(
+      async () =>
+        void (await setWindows((order) => order.filter((oid) => oid !== id))),
+      [id, setWindows],
+    ),
+    isMaximized: React.useMemo(
+      () => order === windows.length - 1 && isMaximized,
+      [order, windows, isMaximized],
+    ),
+    maximize: React.useCallback(async () => {
+      void open();
+      await setIsMaximized(true);
+    }, [open, setIsMaximized]),
+    minimize: React.useCallback(() => setIsMaximized(false), [setIsMaximized]),
+  };
 }
 
 export function Window({
@@ -79,43 +123,10 @@ export function Window({
   id: string;
   children: React.ReactNode;
 }) {
-  const [isOpen, setOpen] = React.useState(false);
-
-  const [isMaximized, setMaximized] = React.useState(false);
-
-  const { focus, remove } = useWindowManager("Window");
-
-  const open = React.useCallback(() => {
-    setOpen(true);
-    focus(id);
-  }, [id, focus]);
-
-  const close = React.useCallback(() => {
-    setOpen(false);
-    setMaximized(false);
-    remove(id);
-  }, [id, remove]);
-
-  const maximize = () => setMaximized(true);
-
-  const minimize = () => setMaximized(false);
-
-  const dragControls =
-    useDragControls() as unknown as WindowState["dragControls"];
+  const dragControls = useDragControls();
 
   return (
-    <WindowContext.Provider
-      value={{
-        id,
-        isOpen,
-        open,
-        close,
-        isMaximized,
-        maximize,
-        minimize,
-        dragControls,
-      }}
-    >
+    <WindowContext.Provider value={{ id, dragControls }}>
       {children}
     </WindowContext.Provider>
   );
@@ -133,9 +144,9 @@ export function WindowTrigger({
   return (
     <Comp
       {...props}
-      onClick={(event) => {
-        open();
+      onClick={async (event) => {
         onClick?.(event);
+        await open();
       }}
     />
   );
@@ -177,15 +188,11 @@ function BaseWindowContent({
   onPointerDown,
   ...props
 }: React.ComponentPropsWithRef<"div">) {
-  const {
-    ref: windowManagerRef,
-    focus,
-    order,
-  } = useWindowManager("WindowContent");
-  const { id } = useWindow("WindowContent");
+  const { boundary } = useWindowBoundary("WindowContent");
+  const { order, open } = useWindow("WindowContent");
 
   return (
-    <Portal.Root container={windowManagerRef.current}>
+    <Portal.Root container={boundary.current}>
       <div
         {...props}
         className={cn(
@@ -193,12 +200,12 @@ function BaseWindowContent({
           className,
         )}
         style={{
-          zIndex: order.indexOf(id) + 1,
+          zIndex: order,
           ...style,
         }}
-        onPointerDown={(event) => {
+        onPointerDown={async (event) => {
           onPointerDown?.(event);
-          focus(id);
+          await open();
         }}
       />
     </Portal.Root>
@@ -213,8 +220,9 @@ function MinimizedWindowContent({
 }: React.ComponentPropsWithoutRef<typeof MotionBaseWindowContent> & {
   ref?: React.Ref<HTMLDivElement>;
 }) {
-  const { ref: windowManagerRef } = useWindowManager("WindowContent");
   const { id, dragControls } = useWindow("WindowContent");
+  const { boundary } = useWindowBoundary("WindowContent");
+  const isClient = useIsClient();
 
   return (
     <MotionBaseWindowContent
@@ -222,15 +230,15 @@ function MinimizedWindowContent({
       layoutId={id}
       className={cn("left-1/2 top-1/2 h-auto w-auto rounded-lg", className)}
       variants={windowContentVariants}
-      initial="hidden"
+      initial={isClient ? "hidden" : false}
       animate="shown"
       exit="hidden"
       transformTemplate={(_, generated) =>
         ` translate(-50%, -50%) ${generated}`
       }
       dragListener={false}
-      dragControls={dragControls}
-      dragConstraints={windowManagerRef}
+      dragControls={dragControls as never}
+      dragConstraints={boundary}
       dragMomentum={false}
       whileDrag={{ scale: 0.98, cursor: "grabbing" }}
       drag
@@ -245,6 +253,7 @@ function MaximizedWindowContent({
   ref?: React.Ref<HTMLDivElement>;
 }) {
   const { id } = useWindow("WindowContent");
+  const isClient = useIsClient();
 
   return (
     <MotionBaseWindowContent
@@ -252,7 +261,7 @@ function MaximizedWindowContent({
       layoutId={id}
       className={cn("left-0 top-0 h-full w-full", className)}
       variants={windowContentVariants}
-      initial="hidden"
+      initial={isClient ? "hidden" : false}
       animate="shown"
       exit="hidden"
     />
@@ -342,9 +351,9 @@ export function WindowMaximize({
   return (
     <Comp
       {...props}
-      onClick={(event) => {
+      onClick={async (event) => {
         onClick?.(event);
-        maximize();
+        await maximize();
       }}
     />
   );
@@ -360,9 +369,9 @@ export function WindowMinimize({
   return (
     <Comp
       {...props}
-      onClick={(event) => {
+      onClick={async (event) => {
         onClick?.(event);
-        minimize();
+        await minimize();
       }}
     />
   );
@@ -380,9 +389,9 @@ export function WindowClose({
   return (
     <Comp
       {...props}
-      onClick={(event) => {
+      onClick={async (event) => {
         onClick?.(event);
-        close();
+        await close();
       }}
     />
   );

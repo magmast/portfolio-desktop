@@ -24,6 +24,7 @@ export function SettingsApp() {
       <WindowTrigger asChild>
         <DesktopIcon Icon={Settings} label="Settings" />
       </WindowTrigger>
+
       <WindowContent>
         <WindowHeader>
           <WindowTitle>Settings</WindowTitle>

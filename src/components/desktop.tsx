@@ -6,33 +6,18 @@ import React from "react";
 import { Text } from "~/components/text";
 import { cn } from "~/lib/utils";
 
-const DesktopContext = React.createContext<
-  React.RefObject<HTMLDivElement | null>
->({
-  current: null,
-});
-
-export function useDesktop() {
-  return React.use(DesktopContext);
-}
-
 export function Desktop({
   className,
   ...props
 }: React.ComponentPropsWithRef<"div">) {
-  const ref = React.useRef<HTMLDivElement>(null);
-
   return (
-    <DesktopContext.Provider value={ref}>
-      <div
-        ref={ref}
-        className={cn(
-          "relative flex flex-col flex-wrap items-start gap-4 overflow-hidden p-6",
-          className,
-        )}
-        {...props}
-      />
-    </DesktopContext.Provider>
+    <div
+      className={cn(
+        "relative flex flex-col flex-wrap items-start gap-4 overflow-hidden p-6",
+        className,
+      )}
+      {...props}
+    />
   );
 }
 
