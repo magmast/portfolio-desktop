@@ -19,9 +19,11 @@ export default function HomePage() {
 
         <WindowBoundary asChild>
           <Desktop className="flex-grow space-y-2">
-            <InfoApp />
-            <LicensesApp />
-            <SettingsApp />
+            <React.Suspense>
+              <InfoApp />
+              <LicensesApp />
+              <SettingsApp />
+            </React.Suspense>
           </Desktop>
         </WindowBoundary>
       </Wallpaper>

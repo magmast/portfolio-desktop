@@ -23,6 +23,8 @@ import { Text } from "~/components/text";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
+const MotionPortal = m.create(Portal.Root);
+
 const WindowBoundaryContext = React.createContext<
   | {
       boundary: React.RefObject<HTMLElement | null>;
@@ -84,6 +86,11 @@ function useWindow(displayName: string) {
 
   const order = React.useMemo(() => windows.indexOf(id), [windows, id]);
 
+  const isLastWindow = React.useMemo(
+    () => order === windows.length - 1,
+    [order, windows],
+  );
+
   const open = React.useCallback(
     async () =>
       void (await setWindows((order) => [
@@ -99,14 +106,15 @@ function useWindow(displayName: string) {
     dragControls,
     isOpen: React.useMemo(() => windows.includes(id), [windows, id]),
     open,
-    close: React.useCallback(
-      async () =>
-        void (await setWindows((order) => order.filter((oid) => oid !== id))),
-      [id, setWindows],
-    ),
+    close: React.useCallback(async () => {
+      await setWindows((order) => order.filter((oid) => oid !== id));
+      if (isLastWindow) {
+        await setIsMaximized(false);
+      }
+    }, [id, setWindows, isLastWindow, setIsMaximized]),
     isMaximized: React.useMemo(
-      () => order === windows.length - 1 && isMaximized,
-      [order, windows, isMaximized],
+      () => isLastWindow && isMaximized,
+      [isLastWindow, isMaximized],
     ),
     maximize: React.useCallback(async () => {
       void open();
@@ -152,119 +160,76 @@ export function WindowTrigger({
   );
 }
 
-const windowContentVariants = {
-  hidden: {
-    scale: 0.8,
-    opacity: 0,
-  },
-  shown: {
-    scale: 1,
-    opacity: 1,
-  },
-};
-
-export function WindowContent(
-  props: React.ComponentPropsWithoutRef<typeof MotionBaseWindowContent> & {
-    ref?: React.Ref<HTMLDivElement>;
-  },
-) {
-  const { id, isOpen, isMaximized } = useWindow("WindowContent");
-
-  return (
-    <AnimatePresence>
-      {isOpen &&
-        (isMaximized ? (
-          <MaximizedWindowContent {...props} key={id} />
-        ) : (
-          <MinimizedWindowContent {...props} key={id} />
-        ))}
-    </AnimatePresence>
-  );
-}
-
-function BaseWindowContent({
+export function WindowContent({
   className,
   style,
   onPointerDown,
   ...props
-}: React.ComponentPropsWithRef<"div">) {
-  const { boundary } = useWindowBoundary("WindowContent");
-  const { order, open } = useWindow("WindowContent");
-
-  return (
-    <Portal.Root container={boundary.current}>
-      <div
-        {...props}
-        className={cn(
-          "absolute min-w-80 overflow-hidden bg-white text-black shadow-lg",
-          className,
-        )}
-        style={{
-          zIndex: order,
-          ...style,
-        }}
-        onPointerDown={async (event) => {
-          onPointerDown?.(event);
-          await open();
-        }}
-      />
-    </Portal.Root>
-  );
-}
-
-const MotionBaseWindowContent = m.create(BaseWindowContent);
-
-function MinimizedWindowContent({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<typeof MotionBaseWindowContent> & {
+}: React.ComponentPropsWithoutRef<typeof MotionPortal> & {
   ref?: React.Ref<HTMLDivElement>;
 }) {
-  const { id, dragControls } = useWindow("WindowContent");
   const { boundary } = useWindowBoundary("WindowContent");
+  const { id, isOpen, isMaximized, open, order, dragControls } =
+    useWindow("WindowContent");
   const isClient = useIsClient();
 
-  return (
-    <MotionBaseWindowContent
-      {...props}
-      layoutId={id}
-      className={cn("left-1/2 top-1/2 h-auto w-auto rounded-lg", className)}
-      variants={windowContentVariants}
-      initial={isClient ? "hidden" : false}
-      animate="shown"
-      exit="hidden"
-      transformTemplate={(_, generated) =>
-        ` translate(-50%, -50%) ${generated}`
-      }
-      dragListener={false}
-      dragControls={dragControls as never}
-      dragConstraints={boundary}
-      dragMomentum={false}
-      whileDrag={{ scale: 0.98, cursor: "grabbing" }}
-      drag
-    />
+  const maximizableProps = React.useMemo(
+    () =>
+      isMaximized
+        ? { transformTemplate: () => "" }
+        : {
+            drag: true,
+            dragMomentum: false,
+            dragListener: false,
+            dragControls: dragControls as never,
+            dragConstraints: boundary,
+            whileDrag: { scale: 0.95, cursor: "grabbing" },
+            transformTemplate: (_: unknown, generated: string) =>
+              `translate(-50%, -50%) ${generated}`,
+          },
+    [boundary, dragControls, isMaximized],
   );
-}
-
-function MaximizedWindowContent({
-  className,
-  ...props
-}: React.ComponentPropsWithoutRef<typeof MotionBaseWindowContent> & {
-  ref?: React.Ref<HTMLDivElement>;
-}) {
-  const { id } = useWindow("WindowContent");
-  const isClient = useIsClient();
 
   return (
-    <MotionBaseWindowContent
-      {...props}
-      layoutId={id}
-      className={cn("left-0 top-0 h-full w-full", className)}
-      variants={windowContentVariants}
-      initial={isClient ? "hidden" : false}
-      animate="shown"
-      exit="hidden"
-    />
+    <AnimatePresence>
+      {isOpen && (
+        <MotionPortal
+          container={boundary.current}
+          variants={{
+            hidden: {
+              scale: 0.8,
+              opacity: 0,
+            },
+            shown: {
+              scale: 1,
+              opacity: 1,
+            },
+          }}
+          initial={isClient ? "hidden" : false}
+          animate="shown"
+          exit="hidden"
+          layoutId={id}
+          {...maximizableProps}
+          {...props}
+          key={id}
+          className={cn(
+            "absolute z-10 min-w-80 overflow-hidden bg-white text-black shadow-lg",
+            isMaximized
+              ? "left-0 top-0 !m-0 h-full w-full"
+              : "left-1/2 top-1/2 h-auto w-auto rounded-lg",
+            className,
+          )}
+          style={{
+            zIndex: order,
+            ...style,
+          }}
+          onPointerDown={async (event) => {
+            onPointerDown?.(event);
+            await open();
+          }}
+        />
+      )}
+    </AnimatePresence>
   );
 }
 
