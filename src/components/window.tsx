@@ -22,6 +22,7 @@ import { useIsClient } from "usehooks-ts";
 import { Text } from "~/components/text";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
+import { scaleVariants } from "~/variants/scale-variants";
 
 const MotionPortal = m.create(Portal.Root);
 
@@ -195,18 +196,9 @@ export function WindowContent({
       {isOpen && (
         <MotionPortal
           container={boundary.current}
-          variants={{
-            hidden: {
-              scale: 0.8,
-              opacity: 0,
-            },
-            shown: {
-              scale: 1,
-              opacity: 1,
-            },
-          }}
+          variants={scaleVariants}
           initial={isClient ? "hidden" : false}
-          animate="shown"
+          animate="visible"
           exit="hidden"
           layoutId={id}
           {...maximizableProps}

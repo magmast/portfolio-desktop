@@ -1,5 +1,6 @@
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
+import * as m from "motion/react-m";
 
 import { cn } from "~/lib/utils";
 
@@ -27,3 +28,5 @@ export function Text({
   const Comp = asChild ? Slot : "span";
   return <Comp {...props} className={cn(text({ variant }), className)} />;
 }
+
+export const MotionText = m.create(Text);

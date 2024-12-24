@@ -49,3 +49,5 @@ export function Clock({
     </Text>
   );
 }
+
+export const MotionClock = m.create(Clock);

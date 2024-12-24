@@ -13,11 +13,15 @@ import {
   WindowTrigger,
 } from "~/components/window";
 
-export function InfoApp() {
+export function InfoApp({ enterDelay = 0 }: { enterDelay?: number }) {
   return (
     <Window id="about-me">
       <WindowTrigger asChild>
-        <DesktopIcon Icon={Info} label="Info" />
+        <DesktopIcon
+          Icon={Info}
+          label="Info"
+          transition={{ delay: enterDelay }}
+        />
       </WindowTrigger>
 
       <WindowContent>

@@ -16,13 +16,17 @@ import {
   WindowTrigger,
 } from "~/components/window";
 
-export function SettingsApp() {
+export function SettingsApp({ enterDelay = 0 }: { enterDelay?: number }) {
   const wallpaper = useWallpaper();
 
   return (
     <Window id="settings">
       <WindowTrigger asChild>
-        <DesktopIcon Icon={Settings} label="Settings" />
+        <DesktopIcon
+          Icon={Settings}
+          label="Settings"
+          transition={{ delay: enterDelay }}
+        />
       </WindowTrigger>
 
       <WindowContent>
