@@ -1,11 +1,14 @@
 "use client";
 
+import { Slot } from "@radix-ui/react-slot";
 import { m } from "motion/react";
 import React from "react";
 
 import { MotionText } from "~/components/text";
 import { cn } from "~/lib/utils";
-import { scaleVariants } from "~/variants/scale-variants";
+import { scaleVariants } from "~/lib/variants";
+
+const MotionSlot = m.create(Slot);
 
 export function Desktop({
   className,
@@ -32,10 +35,13 @@ export function DesktopItem({
   className,
   variants,
   transition,
+  asChild,
   ...props
-}: React.ComponentPropsWithRef<typeof m.button>) {
+}: React.ComponentPropsWithRef<typeof m.button> & { asChild?: boolean }) {
+  const Comp = asChild ? MotionSlot : m.button;
+
   return (
-    <m.button
+    <Comp
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
       {...props}

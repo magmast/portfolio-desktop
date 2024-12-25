@@ -9,7 +9,7 @@ import { MotionClock } from "~/components/clock";
 import { Desktop } from "~/components/desktop";
 import { Wallpaper } from "~/components/wallpaper";
 import { WindowBoundary } from "~/components/window";
-import { scaleVariants } from "~/variants/scale-variants";
+import { scaleVariants } from "~/lib/variants";
 
 export default function HomePage() {
   return (

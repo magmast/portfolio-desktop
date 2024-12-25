@@ -9,26 +9,22 @@ import {
   useDragControls,
 } from "motion/react";
 import * as m from "motion/react-m";
-import {
-  parseAsArrayOf,
-  parseAsBoolean,
-  parseAsString,
-  useQueryState,
-} from "nuqs";
+import Link from "next/link";
+import { useQueryStates } from "nuqs";
 import React from "react";
 import invariant from "tiny-invariant";
-import { useIsClient } from "usehooks-ts";
 
 import { Text } from "~/components/text";
 import { Button } from "~/components/ui/button";
+import { searchParams, urlKeys, useSerialize } from "~/lib/search-params";
 import { cn } from "~/lib/utils";
-import { scaleVariants } from "~/variants/scale-variants";
+import { scaleVariants } from "~/lib/variants";
 
 const MotionPortal = m.create(Portal.Root);
 
 const WindowBoundaryContext = React.createContext<
   | {
-      boundary: React.RefObject<HTMLElement | null>;
+      boundary: HTMLElement | null;
     }
   | undefined
 >(undefined);
@@ -47,14 +43,14 @@ export function WindowBoundary({
   ...props
 }: React.ComponentPropsWithRef<"div"> & { asChild?: boolean }) {
   const Comp = asChild ? Slot : "div";
-  const ref = React.useRef<HTMLElement>(null);
+  const [ref, setRef] = React.useState<HTMLElement | null>(null);
 
   return (
     <WindowBoundaryContext.Provider value={{ boundary: ref }}>
       <Comp
         {...props}
         ref={(node) => {
-          ref.current = node;
+          setRef(node);
           if (typeof props.ref === "function") {
             props.ref(node);
           } else if (props.ref) {
@@ -75,14 +71,12 @@ function useWindow(displayName: string) {
   invariant(context, `${displayName} must be used within a Window component.`);
   const { id, dragControls } = context;
 
-  const [windows, setWindows] = useQueryState(
-    "w",
-    parseAsArrayOf(parseAsString).withDefault([]),
-  );
-
-  const [isMaximized, setIsMaximized] = useQueryState(
-    "m",
-    parseAsBoolean.withDefault(false),
+  const [{ windows, isMaximized }, setParams] = useQueryStates(
+    {
+      windows: searchParams.windows,
+      isMaximized: searchParams.isMaximized,
+    },
+    { urlKeys },
   );
 
   const order = React.useMemo(() => windows.indexOf(id), [windows, id]);
@@ -93,13 +87,16 @@ function useWindow(displayName: string) {
   );
 
   const open = React.useCallback(
-    async () =>
-      void (await setWindows((order) => [
-        ...order.filter((oid) => oid !== id),
-        id,
-      ])),
-    [id, setWindows],
+    async ({ maximized }: { maximized?: boolean } = {}) =>
+      void (await setParams(({ windows, isMaximized, ...params }) => ({
+        windows: [...windows.filter((oid) => oid !== id), id],
+        isMaximized: maximized ?? isMaximized,
+        ...params,
+      }))),
+    [id, setParams],
   );
+
+  const serialize = useSerialize();
 
   return {
     id,
@@ -107,21 +104,37 @@ function useWindow(displayName: string) {
     dragControls,
     isOpen: React.useMemo(() => windows.includes(id), [windows, id]),
     open,
-    close: React.useCallback(async () => {
-      await setWindows((order) => order.filter((oid) => oid !== id));
-      if (isLastWindow) {
-        await setIsMaximized(false);
-      }
-    }, [id, setWindows, isLastWindow, setIsMaximized]),
+    openHref: React.useMemo(
+      () =>
+        serialize({
+          windows: [...windows.filter((oid) => oid !== id), id],
+        }),
+      [id, serialize, windows],
+    ),
+    closeHref: React.useMemo(
+      () =>
+        serialize({
+          windows: windows.filter((oid) => oid !== id),
+          isMaximized: false,
+        }),
+      [serialize, id, windows],
+    ),
     isMaximized: React.useMemo(
       () => isLastWindow && isMaximized,
       [isLastWindow, isMaximized],
     ),
-    maximize: React.useCallback(async () => {
-      void open();
-      await setIsMaximized(true);
-    }, [open, setIsMaximized]),
-    minimize: React.useCallback(() => setIsMaximized(false), [setIsMaximized]),
+    maximizeHref: React.useMemo(
+      () =>
+        serialize({
+          windows: [...windows.filter((oid) => oid !== id), id],
+          isMaximized: true,
+        }),
+      [id, serialize, windows],
+    ),
+    minimizeHref: React.useMemo(
+      () => serialize({ isMaximized: false }),
+      [serialize],
+    ),
   };
 }
 
@@ -143,22 +156,14 @@ export function Window({
 
 export function WindowTrigger({
   asChild,
-  onClick,
   ...props
-}: React.ComponentPropsWithRef<"button"> & {
+}: Omit<React.ComponentPropsWithRef<typeof Link>, "href"> & {
   asChild?: boolean;
+  href?: string;
 }) {
-  const Comp = asChild ? Slot : "button";
-  const { open } = useWindow("WindowTrigger");
-  return (
-    <Comp
-      {...props}
-      onClick={async (event) => {
-        onClick?.(event);
-        await open();
-      }}
-    />
-  );
+  const Comp = asChild ? Slot : Link;
+  const { openHref } = useWindow("WindowTrigger");
+  return <Comp href={openHref} {...props} />;
 }
 
 export function WindowContent({
@@ -172,7 +177,6 @@ export function WindowContent({
   const { boundary } = useWindowBoundary("WindowContent");
   const { id, isOpen, isMaximized, open, order, dragControls } =
     useWindow("WindowContent");
-  const isClient = useIsClient();
 
   const maximizableProps = React.useMemo(
     () =>
@@ -183,7 +187,7 @@ export function WindowContent({
             dragMomentum: false,
             dragListener: false,
             dragControls: dragControls as never,
-            dragConstraints: boundary,
+            dragConstraints: { current: boundary },
             whileDrag: { scale: 0.95, cursor: "grabbing" },
             transformTemplate: (_: unknown, generated: string) =>
               `translate(-50%, -50%) ${generated}`,
@@ -195,9 +199,9 @@ export function WindowContent({
     <AnimatePresence>
       {isOpen && (
         <MotionPortal
-          container={boundary.current}
+          container={boundary}
           variants={scaleVariants}
-          initial={isClient ? "hidden" : false}
+          initial="hidden"
           animate="visible"
           exit="hidden"
           layoutId={id}
@@ -252,24 +256,39 @@ export function WindowHeader({
 
       <div className="flex justify-end">
         {isMaximized ? (
-          <WindowMinimize asChild>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-200">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hover:bg-zinc-200"
+            asChild
+          >
+            <WindowMinimize>
               <Minimize />
-            </Button>
-          </WindowMinimize>
+            </WindowMinimize>
+          </Button>
         ) : (
-          <WindowMaximize asChild>
-            <Button variant="ghost" size="icon" className="hover:bg-zinc-200">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hover:bg-zinc-200"
+            asChild
+          >
+            <WindowMaximize>
               <Maximize />
-            </Button>
-          </WindowMaximize>
+            </WindowMaximize>
+          </Button>
         )}
 
-        <WindowClose asChild>
-          <Button variant="ghost" size="icon" className="hover:bg-zinc-200">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="hover:bg-zinc-200"
+          asChild
+        >
+          <WindowClose>
             <X />
-          </Button>
-        </WindowClose>
+          </WindowClose>
+        </Button>
       </div>
     </m.div>
   );
@@ -301,58 +320,38 @@ export function WindowBody({
 
 export function WindowMaximize({
   asChild,
-  onClick,
   ...props
-}: React.ComponentPropsWithRef<"button"> & { asChild?: boolean }) {
-  const Comp = asChild ? Slot : "button";
-  const { maximize } = useWindow("WindowHeader");
-  return (
-    <Comp
-      {...props}
-      onClick={async (event) => {
-        onClick?.(event);
-        await maximize();
-      }}
-    />
-  );
+}: Omit<React.ComponentPropsWithRef<typeof Link>, "href"> & {
+  asChild?: boolean;
+  href?: string;
+}) {
+  const Comp = asChild ? Slot : Link;
+  const { maximizeHref } = useWindow("WindowHeader");
+  return <Comp href={maximizeHref} {...props} />;
 }
 
 export function WindowMinimize({
   asChild,
-  onClick,
   ...props
-}: React.ComponentPropsWithRef<"button"> & { asChild?: boolean }) {
-  const Comp = asChild ? Slot : "button";
-  const { minimize } = useWindow("WindowHeader");
-  return (
-    <Comp
-      {...props}
-      onClick={async (event) => {
-        onClick?.(event);
-        await minimize();
-      }}
-    />
-  );
+}: Omit<React.ComponentPropsWithRef<typeof Link>, "href"> & {
+  asChild?: boolean;
+  href?: string;
+}) {
+  const Comp = asChild ? Slot : Link;
+  const { minimizeHref } = useWindow("WindowHeader");
+  return <Comp href={minimizeHref} {...props} />;
 }
 
 export function WindowClose({
   asChild,
-  onClick,
   ...props
-}: React.ComponentPropsWithRef<"button"> & {
+}: Omit<React.ComponentPropsWithRef<typeof Link>, "href"> & {
   asChild?: boolean;
+  href?: string;
 }) {
-  const Comp = asChild ? Slot : "button";
-  const { close } = useWindow("WindowHeader");
-  return (
-    <Comp
-      {...props}
-      onClick={async (event) => {
-        onClick?.(event);
-        await close();
-      }}
-    />
-  );
+  const Comp = asChild ? Slot : Link;
+  const { closeHref } = useWindow("WindowHeader");
+  return <Comp href={closeHref} {...props} />;
 }
 
 export function ToDoWindow({

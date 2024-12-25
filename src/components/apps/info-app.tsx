@@ -16,12 +16,12 @@ import {
 export function InfoApp() {
   return (
     <Window id="about-me">
-      <WindowTrigger asChild>
-        <DesktopItem>
+      <DesktopItem asChild>
+        <WindowTrigger>
           <DesktopIcon>{({ size }) => <Info size={size} />}</DesktopIcon>
           <DesktopLabel>Info</DesktopLabel>
-        </DesktopItem>
-      </WindowTrigger>
+        </WindowTrigger>
+      </DesktopItem>
 
       <WindowContent>
         <WindowHeader>

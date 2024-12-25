@@ -21,12 +21,12 @@ export function SettingsApp() {
 
   return (
     <Window id="settings">
-      <WindowTrigger asChild>
-        <DesktopItem>
+      <DesktopItem asChild>
+        <WindowTrigger>
           <DesktopIcon>{({ size }) => <Settings size={size} />}</DesktopIcon>
           <DesktopLabel>Settings</DesktopLabel>
-        </DesktopItem>
-      </WindowTrigger>
+        </WindowTrigger>
+      </DesktopItem>
 
       <WindowContent>
         <WindowHeader>
