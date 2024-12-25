@@ -5,7 +5,7 @@ import Image from "next/image";
 
 import abstractPainting from "~/assets/wallpapers/abstract-painting.jpg";
 import orangeMoon from "~/assets/wallpapers/orange-moon.jpg";
-import { DesktopIcon } from "~/components/desktop";
+import { DesktopIcon, DesktopItem, DesktopLabel } from "~/components/desktop";
 import { useWallpaper } from "~/components/wallpaper";
 import {
   Window,
@@ -16,17 +16,16 @@ import {
   WindowTrigger,
 } from "~/components/window";
 
-export function SettingsApp({ enterDelay = 0 }: { enterDelay?: number }) {
+export function SettingsApp() {
   const wallpaper = useWallpaper();
 
   return (
     <Window id="settings">
       <WindowTrigger asChild>
-        <DesktopIcon
-          Icon={Settings}
-          label="Settings"
-          transition={{ delay: enterDelay }}
-        />
+        <DesktopItem>
+          <DesktopIcon>{({ size }) => <Settings size={size} />}</DesktopIcon>
+          <DesktopLabel>Settings</DesktopLabel>
+        </DesktopItem>
       </WindowTrigger>
 
       <WindowContent>

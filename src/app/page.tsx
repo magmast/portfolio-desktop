@@ -13,28 +13,30 @@ import { scaleVariants } from "~/variants/scale-variants";
 
 export default function HomePage() {
   return (
-    <main className="relative flex h-screen w-screen flex-col">
+    <m.main
+      className="relative flex h-screen w-screen flex-col"
+      initial="hidden"
+      animate="visible"
+    >
       <Wallpaper defaultWallpaper={defaultWallpaper}>
         <m.div
           className="relative flex w-full justify-center bg-black py-1 text-white"
           variants={{ hidden: { y: "-100%" }, visible: { y: 0 } }}
-          initial="hidden"
-          animate="visible"
           transition={{ bounce: 0.2, when: "beforeChildren" }}
         >
           <MotionClock variants={scaleVariants} />
         </m.div>
 
-        <WindowBoundary asChild>
-          <Desktop className="flex-grow space-y-2">
-            <React.Suspense>
+        <React.Suspense>
+          <WindowBoundary asChild>
+            <Desktop className="flex-grow space-y-2">
               <InfoApp />
-              <LicensesApp enterDelay={0.2} />
-              <SettingsApp enterDelay={0.4} />
-            </React.Suspense>
-          </Desktop>
-        </WindowBoundary>
+              <LicensesApp />
+              <SettingsApp />
+            </Desktop>
+          </WindowBoundary>
+        </React.Suspense>
       </Wallpaper>
-    </main>
+    </m.main>
   );
 }

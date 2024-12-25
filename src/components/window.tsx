@@ -201,6 +201,7 @@ export function WindowContent({
           animate="visible"
           exit="hidden"
           layoutId={id}
+          layoutDependency={isMaximized}
           {...maximizableProps}
           {...props}
           key={id}

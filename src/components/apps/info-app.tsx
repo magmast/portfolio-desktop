@@ -2,7 +2,7 @@
 
 import { Info } from "lucide-react";
 
-import { DesktopIcon } from "~/components/desktop";
+import { DesktopIcon, DesktopItem, DesktopLabel } from "~/components/desktop";
 import { Text } from "~/components/text";
 import {
   Window,
@@ -13,15 +13,14 @@ import {
   WindowTrigger,
 } from "~/components/window";
 
-export function InfoApp({ enterDelay = 0 }: { enterDelay?: number }) {
+export function InfoApp() {
   return (
     <Window id="about-me">
       <WindowTrigger asChild>
-        <DesktopIcon
-          Icon={Info}
-          label="Info"
-          transition={{ delay: enterDelay }}
-        />
+        <DesktopItem>
+          <DesktopIcon>{({ size }) => <Info size={size} />}</DesktopIcon>
+          <DesktopLabel>Info</DesktopLabel>
+        </DesktopItem>
       </WindowTrigger>
 
       <WindowContent>
