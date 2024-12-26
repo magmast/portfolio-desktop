@@ -7,6 +7,7 @@ import { LicensesApp } from "~/components/apps/licenses-app";
 import { SettingsApp } from "~/components/apps/settings-app";
 import { MotionClock } from "~/components/clock";
 import { Desktop } from "~/components/desktop";
+import { PopoverCalendar } from "~/components/popover-calendar";
 import { Wallpaper } from "~/components/wallpaper";
 import { WindowBoundary } from "~/components/window";
 import { scaleVariants } from "~/lib/variants";
@@ -24,7 +25,9 @@ export default function HomePage() {
           variants={{ hidden: { y: "-100%" }, visible: { y: 0 } }}
           transition={{ bounce: 0.2, when: "beforeChildren" }}
         >
-          <MotionClock variants={scaleVariants} />
+          <PopoverCalendar>
+            <MotionClock variants={scaleVariants} />
+          </PopoverCalendar>
         </m.div>
 
         <React.Suspense>
