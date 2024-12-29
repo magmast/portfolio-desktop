@@ -211,10 +211,10 @@ export function WindowContent({
           key={id}
           className={cn(
             "absolute z-10 min-w-80 overflow-hidden bg-white text-black shadow-lg",
-            isMaximized
-              ? "left-0 top-0 !m-0 h-full w-full"
-              : "left-1/2 top-1/2 h-auto w-auto rounded-lg",
+            isMaximized ? "!m-0" : "left-1/2 top-1/2 h-auto w-auto rounded-lg",
             className,
+            isMaximized &&
+              "left-0 top-0 h-full w-full sm:h-full sm:w-full md:h-full md:w-full lg:h-full lg:w-full xl:h-full xl:w-full 2xl:h-full 2xl:w-full",
           )}
           style={{
             zIndex: order,

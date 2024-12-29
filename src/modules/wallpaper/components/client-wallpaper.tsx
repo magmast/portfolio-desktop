@@ -1,42 +1,31 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
-import Image, { type StaticImageData } from "next/image";
+import Image from "next/image";
 import React from "react";
 import { useIsClient } from "usehooks-ts";
 
+import { type WallpaperKey, wallpapers } from "../constants/wallpapers";
+
 const MotionImage = m.create(Image);
 
-interface WallpaperState {
-  wallpaper: StaticImageData;
-  setWallpaper: (wallpaper: StaticImageData) => void;
-}
-
-const WallpaperContext = React.createContext<WallpaperState | undefined>(
-  undefined,
-);
-
-export function useWallpaper() {
-  return React.use(WallpaperContext);
-}
-
-export function Wallpaper({
-  defaultWallpaper,
+export function ClientWallpaper({
+  wallpaper: wallpaperKey,
   children,
 }: {
-  defaultWallpaper: StaticImageData;
+  wallpaper: WallpaperKey;
   children: React.ReactNode;
 }) {
   const isClient = useIsClient();
 
-  const [wallpaper, setWallpaper] = React.useState(defaultWallpaper);
+  const wallpaper = wallpapers[wallpaperKey];
 
   return (
-    <WallpaperContext.Provider value={{ wallpaper, setWallpaper }}>
+    <>
       <AnimatePresence mode="popLayout">
         <MotionImage
-          key={wallpaper.src}
-          src={wallpaper}
+          key={wallpaperKey}
+          src={wallpaper.src}
           alt="Wallpaper"
           className="absolute left-0 top-0 h-full w-full object-cover"
           sizes="100vw"
@@ -50,6 +39,6 @@ export function Wallpaper({
       </AnimatePresence>
 
       {children}
-    </WallpaperContext.Provider>
+    </>
   );
 }
